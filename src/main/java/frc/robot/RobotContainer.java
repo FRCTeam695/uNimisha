@@ -13,7 +13,9 @@ import frc.robot.subsystems.DrivetrainSubsystem;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.ServoSubsystem;
+import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.subsystems.LEDSubsystem.Color;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.Servo;
@@ -35,15 +37,17 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  public final DrivetrainSubsystem DTSubsystem = new DrivetrainSubsystem();
+  public  DrivetrainSubsystem DT = new DrivetrainSubsystem();
 
-  // public final ExampleSubsystem nimishaSubsystem = new ExampleSubsystem();
+  // public  ExampleSubsystem nimishaSubsystem = new ExampleSubsystem();
 
-  public final ServoSubsystem servoSubsystem = new ServoSubsystem();
+  public ServoSubsystem Servo = new ServoSubsystem();
 
-  public final CANSparkFlexSubsystem CSPSubsystem = new CANSparkFlexSubsystem();
+  public CANSparkFlexSubsystem CSP = new CANSparkFlexSubsystem();
 
-  private final LEDSubsystem LEDSubsystem = new LEDSubsystem();
+  public static LEDSubsystem LED = new LEDSubsystem();
+
+  public SwerveSubsystem Swerve = new SwerveSubsystem();
 
   final SendableChooser<Command> m_chooser = new SendableChooser<>();
 
@@ -68,14 +72,17 @@ public class RobotContainer {
     // Configure the trigger bindings
     configureBindings();
 
-
-    m_chooser.addOption("Pink Auto", LEDSubsystem.changeColorCommand(Color.PINK, 1));
+    m_chooser.addOption("Pink Auto", LED.changeColorCommand(Color.PINK, 1));
     System.out.println("Pink option added to chooser");
-    m_chooser.addOption("Blue Auto", LEDSubsystem.changeColorCommand(Color.BLUE, 1));
+    m_chooser.addOption("Blue Auto", LED.changeColorCommand(Color.BLUE, 1));
     System.out.println("Blue option added to chooser");
     SmartDashboard.putData(m_chooser);
     System.out.println("Autonomous options added to chooser");
     
+  }
+
+  public static LEDSubsystem getLED () {
+    return LED;
   }
 
   /**
@@ -83,41 +90,53 @@ public class RobotContainer {
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
    * predicate, or via the named factories in {@link
    * edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s subclasses for {@link
-   * CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
+   * CommandXboxController Xbox}/{@link edu.wpi..wpilibj2.command.button.CommandPS4Controller
    * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
    * joysticks}.
    */
   private void configureBindings() {
 
-    //m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.arcadeDrive( () -> m_leftJoystick.getRawAxis(1), () -> (m_rightJoystick.getRawAxis(0))));
+    // m_exampleSubsystem.setDefaultCommand(m_exampleSubsystem.arcadeDrive( () -> m_leftJoystick.getRawAxis(1), () -> (m_rightJoystick.getRawAxis(0))));
 
     // nimishaSubsystem.setDefaultCommand(nimishaSubsystem.turnAtSetPoint());
+
+    Swerve.setDefaultCommand(Swerve.drive(
+
+      () -> m_driverController.getRawAxis(0),
+
+      () -> m_driverController.getRawAxis(1),
+
+      () -> m_driverController.getRawAxis(4)
+
+    ));
 
     System.out.println("configuring button bindings");
 
     
     //m_driverController.x().onTrue(nimishaSubsystem.changeColorCommand(Color.BLUE));
-    m_driverController.x().whileTrue(CSPSubsystem.turnMotorOnToggle());
-    m_driverController.y().onTrue(LEDSubsystem.changeColorCommand(Color.YELLOW, 1));
-    m_driverController.a().whileTrue(CSPSubsystem.turnAtSetPoint());
+    m_driverController.x().whileTrue(CSP.turnMotorOnToggle());
+    m_driverController.y().onTrue(LED.changeColorCommand(Color.YELLOW, 1));
+    m_driverController.a().whileTrue(CSP.turnAtSetPoint());
     m_driverController.b().onTrue(
-      LEDSubsystem.changeColorCommand(Color.RED, 1)
+      LED.changeColorCommand(Color.RED, 1)
       //.andThen(new WaitCommand(1))
       //.andThen(m_exampleSubsystem.turnServoClockwise())
       //.andThen(new WaitCommand(1))
       //.andThen(m_exampleSubsystem.servoOff())
     );
-    m_driverController.back().whileTrue(CSPSubsystem.turnMotor(() -> m_driverController.getRawAxis(0)));
-    m_driverController.start().whileTrue(servoSubsystem.controlSpeed(() -> m_driverController.getRawAxis(1)));
+    m_driverController.back().whileTrue(
+      CSP.turnMotor(() -> m_driverController.getRawAxis(0))
+    );
+    m_driverController.start().whileTrue(Servo.controlSpeed(() -> m_driverController.getRawAxis(1)));
     m_driverController.leftTrigger().whileTrue(
       // new WaitCommand(1.0)
       //.andThen
-      (servoSubsystem.turnServoCounterClockwise())
+      (Servo.turnServoCounterClockwise())
     );
     m_driverController.rightTrigger().whileTrue(
       // new WaitCommand(1.0)
       //.andThen
-      (servoSubsystem.turnServoClockwise())
+      (Servo.turnServoClockwise())
     );
 
   }

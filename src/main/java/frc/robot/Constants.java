@@ -25,6 +25,7 @@ public final class Constants {
   }
 
   public static  class PIDConstants {
+    /* 
     public static final double kP = 0.0003;
     public static final double kI = 0.000001;
     public static final double kD = 0.00001;
@@ -36,5 +37,12 @@ public final class Constants {
     public static final double kFF = 0.0001;
 
     public static final double setPointRPM = 1427;
+    */
+
+    public static final String pKey = "P value";
+    public static final String iKey = "I value";
+    public static final String dKey = "D value";
+    public static final String ffKey = "FF value";
+    public static final String spKey = "Setpoint value";
   }
 }

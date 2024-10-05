@@ -13,24 +13,42 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkPIDController;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.Robot;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.LEDSubsystem.ChooseColor;
 import frc.robot.subsystems.LEDSubsystem.Color;
 import frc.robot.subsystems.LEDSubsystem;
+import frc.robot.RobotContainer;
+
 
 public class CANSparkFlexSubsystem extends SubsystemBase {
 
   public CANSparkFlex myMotor;
   public RelativeEncoder myEncoder;
   public SparkPIDController myPIDController;
-  private final LEDSubsystem motorLED = new LEDSubsystem();
+  // public final LEDSubsystem motorLED = new LEDSubsystem();
 
   public DigitalInput mechanicalSwitch; 
   public DigitalInput magnetSwitch;
+
+  double kP = 0.0003;
+  double kI = 0.000001;
+  double kD = 0.00001;
+  double kIz = 0;
+
+  double kMinOutput = -1;
+  double kMaxOutput = 1;
+
+  double kFF = 0.0001;
+
+  double setPointRPM = 1427; 
+  
 
   /** Creates a new CANSparkFlex. */
   public CANSparkFlexSubsystem() {
@@ -48,21 +66,26 @@ public class CANSparkFlexSubsystem extends SubsystemBase {
     mechanicalSwitch = new DigitalInput(9);
     magnetSwitch = new DigitalInput(8);
 
+    Preferences.initDouble(Constants.PIDConstants.pKey, kP);
+    Preferences.initDouble(Constants.PIDConstants.iKey, kI);
+    Preferences.initDouble(Constants.PIDConstants.dKey, kD);
+    Preferences.initDouble(Constants.PIDConstants.ffKey, kFF);
+    Preferences.initDouble(Constants.PIDConstants.spKey, setPointRPM);
+
     //myPIDController = new PIDController(Constants.PIDConstants.kP, Constants.PIDConstants.kI, Constants.PIDConstants.kD);
 
     //myPIDController.setReference(Constants.PIDConstants.setPoint, CANSparkBase.ControlType.kVelocity);
  
-    // Set the P value of the PID controller on slot 0 to 0.25
-    myPIDController.setP(Constants.PIDConstants.kP);
-    myPIDController.setI(Constants.PIDConstants.kI);
-    myPIDController.setD(Constants.PIDConstants.kD);
-    myPIDController.setIZone(Constants.PIDConstants.kIz);
+    myPIDController.setP(kP);
+    myPIDController.setI(kI);
+    myPIDController.setD(kD);
+    myPIDController.setIZone(kIz);
 
     // Set the minimum and maximum outputs of the motor [-1, 1]
-    myPIDController.setOutputRange(Constants.PIDConstants.kMinOutput, Constants.PIDConstants.kMaxOutput);
+    myPIDController.setOutputRange(kMinOutput, kMaxOutput);
 
     // Set kFF
-    myPIDController.setFF(Constants.PIDConstants.kFF);
+    myPIDController.setFF(kFF);
   }
 
   public Command turnMotor(DoubleSupplier speed) {
@@ -79,29 +102,25 @@ public class CANSparkFlexSubsystem extends SubsystemBase {
           s = 0;
         }
         SmartDashboard.putNumber("Motor Speed", s);
+
         if (s > 0) {
           myMotor.set(s);
           System.out.println("motor turning clockwise");
-
-          // Set color to purple
-          motorLED.changeColor(Color.PURPLE, s);
-          System.out.println("color is purple");
+          RobotContainer.getLED().changeColor(Color.PURPLE, 1);
         }
         if (s < 0) {
           myMotor.set(s);
           System.out.println("motor turning counterclockwise");
+          RobotContainer.getLED().changeColor(Color.CYAN, 1);
 
-          // cyan
-          motorLED.changeColor(Color.CYAN, s);
-          System.out.println("color is cyan");
-        }
+        }        
       },
    
       // ** ON INTERRUPTED
       interrupted -> {
         myMotor.set(0);
         System.out.println("motor stopped");
-        motorLED.changeColor(Color.COLORLESS, 0);
+        RobotContainer.getLED().changeColor(Color.COLORLESS, 1);
       },
    
       // ** END CONDITION
@@ -154,12 +173,12 @@ public class CANSparkFlexSubsystem extends SubsystemBase {
         // myPIDController.atSetpoint();
 
         System.out.println("Button pressed, motor turning");
-        SmartDashboard.putNumber("kP value", Constants.PIDConstants.kP);
-        SmartDashboard.putNumber("kI value", Constants.PIDConstants.kI);
-        SmartDashboard.putNumber("kD value", Constants.PIDConstants.kD);
-        SmartDashboard.putNumber("Setpoint RPM", Constants.PIDConstants.setPointRPM);
+        SmartDashboard.putNumber(Constants.PIDConstants.pKey, kP);
+        SmartDashboard.putNumber(Constants.PIDConstants.iKey, kI);
+        SmartDashboard.putNumber(Constants.PIDConstants.dKey, kD);
+        SmartDashboard.putNumber("Setpoint RPM", setPointRPM);
 
-        myPIDController.setReference(Constants.PIDConstants.setPointRPM, CANSparkMax.ControlType.kVelocity);
+        myPIDController.setReference(setPointRPM, CANSparkMax.ControlType.kVelocity);
 
         SmartDashboard.putNumber("Motor Speed", myEncoder.getVelocity());
 
@@ -169,6 +188,11 @@ public class CANSparkFlexSubsystem extends SubsystemBase {
 
 
         System.out.println("Set point velocity set");
+
+        loadPreferences(); // supposed to update values based off shuffleboard
+
+        System.out.println("New prefs loaded");
+
       },
 
       interrupted -> {
@@ -179,6 +203,38 @@ public class CANSparkFlexSubsystem extends SubsystemBase {
       () -> false,
 
     this);
+  }
+
+  public void loadPreferences() {
+    // Load Preferences for kP
+    kP = Preferences.getDouble(Constants.PIDConstants.pKey, kP);
+    if (kP != Preferences.getDouble(Constants.PIDConstants.pKey, kP)) {
+      kP = Preferences.getDouble(Constants.PIDConstants.pKey, kP);
+      myPIDController.setP(kP);
+    }
+    // Load Preferences for kI
+    kI = Preferences.getDouble(Constants.PIDConstants.iKey, kI);
+    if (kI != Preferences.getDouble(Constants.PIDConstants.iKey, kI)) {
+      kI = Preferences.getDouble(Constants.PIDConstants.iKey, kI);
+      myPIDController.setI(kI);
+    }
+    // Load Preferences for kD
+    kD = Preferences.getDouble(Constants.PIDConstants.dKey, kD);
+    if (kD != Preferences.getDouble(Constants.PIDConstants.dKey, kD)) {
+      kD = Preferences.getDouble(Constants.PIDConstants.dKey, kD);
+      myPIDController.setD(kD);
+    }
+    // Load Preferences for kFF
+    kFF = Preferences.getDouble(Constants.PIDConstants.ffKey, kFF);
+    if (kFF != Preferences.getDouble(Constants.PIDConstants.ffKey, kFF)) {
+      kFF = Preferences.getDouble(Constants.PIDConstants.ffKey, kFF);
+      myPIDController.setFF(kFF);
+    }
+    // Load Preferences for set point
+    setPointRPM = Preferences.getDouble(Constants.PIDConstants.spKey, setPointRPM);
+    if (setPointRPM != Preferences.getDouble(Constants.PIDConstants.spKey, setPointRPM)) {
+      setPointRPM = Preferences.getDouble(Constants.PIDConstants.spKey, setPointRPM);
+    }
   }
 
   @Override

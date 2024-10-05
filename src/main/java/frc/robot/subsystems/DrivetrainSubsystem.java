@@ -51,6 +51,8 @@ public class DrivetrainSubsystem extends SubsystemBase{
 
     RelativeEncoder leftEncoder = leftFrontMotor.getEncoder();
     RelativeEncoder rightEncoder = rightFrontMotor.getEncoder();
+
+    
     
     MotorController leftMotors = new MotorController() {
         public void set (double speed) {

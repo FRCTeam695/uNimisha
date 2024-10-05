@@ -1,5 +1,7 @@
 package frc.robot.subsystems;
 
+import java.util.function.DoubleSupplier;
+
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -122,6 +124,42 @@ public class LEDSubsystem extends SubsystemBase {
                 color.setColor();
                 for (int i = 0; i < myLedBuffer.getLength(); i++) {
                     myLedBuffer.setRGB(i, (int)(rv*brightness), (int)(gv*brightness), (int)(bv*brightness));
+                }
+                myLed.setData(myLedBuffer);
+            },
+
+            interrupted -> {},
+
+            () -> false,
+
+        this);
+    }
+
+    public Command changeColorDirection (Color pChoice, Color nChoice, double brightness, double speed) {
+
+        return new FunctionalCommand(
+
+            // INIT
+            () -> {},
+
+            // EXECUTE
+            () -> {
+                double s = speed;
+                double b = brightness;
+                if (s > 0) {
+                    ChooseColor posColor = new ChooseColor(pChoice);
+                    posColor.setColor();
+                }
+                if (s < 0) {
+                    ChooseColor negColor = new ChooseColor(nChoice);
+                    negColor.setColor();
+                }
+                if (s == 0) {
+                    new ChooseColor(Color.COLORLESS).setColor();
+                }
+                
+                for (int i = 0; i < myLedBuffer.getLength(); i++) {
+                    myLedBuffer.setRGB(i, (int)(Math.abs(rv*b)), (int)(Math.abs(gv*b)), (int)(Math.abs(bv*b)));
                 }
                 myLed.setData(myLedBuffer);
             },

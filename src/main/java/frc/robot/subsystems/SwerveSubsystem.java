@@ -56,7 +56,7 @@ public class SwerveSubsystem extends SubsystemBase {
     turningMotor = new TalonFX(42);
     turningEncoder = new CANcoder(41);
     
-    double kP = 0.1;
+    double kP = 0.0001;
     double kI = 0;
     double kD = 0;
    
@@ -125,35 +125,60 @@ public class SwerveSubsystem extends SubsystemBase {
 
     () -> {
       
+      // strafe 
       double xSTR = x1.getAsDouble();
+
+      // fwd
       double yFWD = y1.getAsDouble() * -1;
+
+      // rotation
       double xRCW = x2.getAsDouble();
 
+      // hypotenuse
       double r = Math.sqrt ((L*L)+(W*W)); // side length of triangle created by width and length
       
-      double RCW_fwd = yFWD - xRCW * (L/r); // going forward
+      // calculating rcw values. in this case doing 4th quadrant so backwards and right
+      // double RCW_fwd = yFWD - xRCW * (L/r); // going forward
       double RCW_bkwd = yFWD + xRCW * (L/r); // going backward
       double RCW_rightStr = xSTR + xRCW * (W/r); // going right
-      double RCW_leftStr = xSTR - xRCW * (W/r); // going left
+      // double RCW_leftStr = xSTR - xRCW * (W/r); // going left
     
       // only one swerve drive for now in quadrant 4
+      // speed of motor
       double backRightSpeed = Math.sqrt(RCW_bkwd * RCW_bkwd + RCW_rightStr * RCW_rightStr);
       
+      // raw angle of motor
+      /*
+       * quadrant 1 between values of 0 and 90 (going cw)
+       * quadrant 2 between values of -90 and 0 (going cw)
+       * quadrant 3 between values of 90 and 0 (going ccw)
+       * quadrant 4 between valyes of 0 and -90 (going ccw)
+       * 
+       */
       double backRightAngle = Math.toDegrees(Math.atan(RCW_rightStr/RCW_bkwd));
 
-      if (RCW_rightStr > 0) {
-        backRightAngle -= 90;
-      } else if (RCW_rightStr < 0) {
-        backRightAngle += 90;
+      // meant to match up the input angle with the encoder angle
+      if (xSTR > 0) {
+        if (yFWD > 0) {
+          backRightAngle *= -1; // converts calculated angle to encoder value
+        } else if (yFWD < 0) {
+          backRightAngle = -180 - backRightAngle;
+        }
+      } else if (xSTR < 0) {
+        if (yFWD < 0) {
+          backRightAngle = 180 - backRightAngle;
+        } else if (yFWD > 0) {
+          backRightAngle *= -1;
+        }
       }
 
-      // driveMotor.set(backRightSpeed);
+      driveMotor.set(backRightSpeed);
 
       turningMotor.getPosition();
 
       double encoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
       
-      // turningMotor.set(turningPIDControl.calculate(encoderPosition, backRightAngle));
+      turningMotor.set(turningPIDControl.calculate(encoderPosition, backRightAngle));
 
       SmartDashboard.putNumber("Module 4 PID Output", turningPIDControl.calculate(encoderPosition, backRightAngle));
 

@@ -110,6 +110,8 @@ public class RobotContainer {
 
     ));
 
+    // Swerve.setDefaultCommand(Swerve.motorTest());
+
     System.out.println("configuring button bindings");
 
     

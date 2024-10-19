@@ -118,7 +118,7 @@ public class RobotContainer {
 
     System.out.println("configuring button bindings");
 
-    // m_driverController.a().whileTrue(Swerve.PIDTest());
+    m_driverController.a().whileTrue(Swerve.faceForward());
     
     //m_driverController.x().onTrue(nimishaSubsystem.changeColorCommand(Color.BLUE));
     m_driverController.x().whileTrue(CSP.turnMotorOnToggle());
@@ -148,6 +148,13 @@ public class RobotContainer {
 
   }
 
+  /**
+   * Sets deadband values.
+   * 
+   * @param input // input by the axis (number between -1 and 1)
+   * @param threshold // deadband range
+   * @return
+   */
   static double deadband (double input, double threshold) {
     if (Math.abs(input) > Math.abs(threshold)) {
       return input;

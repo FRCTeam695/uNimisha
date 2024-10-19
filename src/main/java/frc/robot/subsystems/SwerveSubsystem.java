@@ -39,7 +39,7 @@ public class SwerveSubsystem extends SubsystemBase {
   /**
    * Double finals for HALF the length and width of the chassis 
    * 
-   * Currently, no neasurements so as seen below, they will be declared to a random number
+   * Currently, no measurements so as seen below, they will be declared to a random number
    */
   final double L;
   final double W;
@@ -233,29 +233,9 @@ public class SwerveSubsystem extends SubsystemBase {
       
       /*
        * Computes the turnAngle, a number between -180 and 180 
-       *      STILL NEED TO TEST THIS!!! (turn off any drive commands and view shuffleboard)
+       * 
        */
-      turnAngle = Math.toDegrees(Math.atan2(FWD4, STR4));
-
-      // THE FOLLOWING IS NO LONGER NEEDED BECAUSE ATAN WAS SWAPPED FOR ATAN2
-      // (but it's just here in case)
-
-      /*
-      // meant to match up the input angle with the encoder angle
-      if (xSTR > 0) {
-        if (yFWD > 0) {
-          backRightAngle *= -1; // converts calculated angle to encoder value
-        } else if (yFWD < 0) {
-          backRightAngle = -180 - backRightAngle;
-        }
-      } else if (xSTR < 0) {
-        if (yFWD < 0) {
-          backRightAngle = 180 - backRightAngle;
-        } else if (yFWD > 0) {
-          backRightAngle *= -1;
-        }
-      }
-      */
+      turnAngle = Math.toDegrees(Math.atan2(STR4, FWD4));
 
       // Following code calls to actually send these computed vaulues to the motors.
 
@@ -285,6 +265,23 @@ public class SwerveSubsystem extends SubsystemBase {
 
   }
 
+  public Command faceForward () {
+    return new FunctionalCommand(
+      () -> {}, 
+      
+      () -> {
+
+        turnEncoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
+
+        turningMotor.set(turningPIDControl.calculate(turnEncoderPosition, 17));
+      },
+      
+      interrupted -> {}, 
+      
+      () -> false, 
+      
+      this);
+  }
   /*
    * This command allows for PID tuning of the Talon FX motors.
    * 

@@ -109,6 +109,8 @@ public class SwerveSubsystem extends SubsystemBase {
      * 
      */
     turningPIDControl.enableContinuousInput(-180, 180); 
+
+    configCANcoder(17);
     
   }
 
@@ -255,7 +257,9 @@ public class SwerveSubsystem extends SubsystemBase {
       
     },
 
-    interrupted -> {},
+    interrupted -> {
+      
+    },
 
     () -> false,
 
@@ -274,11 +278,14 @@ public class SwerveSubsystem extends SubsystemBase {
         turnEncoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
 
         turningMotor.set(turningPIDControl.calculate(turnEncoderPosition, 17));
+
+        turningMotor.setPosition(0);
       },
       
-      interrupted -> {}, 
+      interrupted -> {
+      }, 
       
-      () -> false, 
+      () -> false,
       
       this);
   }

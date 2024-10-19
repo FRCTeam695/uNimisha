@@ -100,25 +100,30 @@ public class RobotContainer {
 
     // nimishaSubsystem.setDefaultCommand(nimishaSubsystem.turnAtSetPoint());
 
+    
     Swerve.setDefaultCommand(Swerve.drive(
 
-      () -> m_driverController.getRawAxis(0),
+      () -> deadband(m_driverController.getRawAxis(0), 0.15),
 
-      () -> m_driverController.getRawAxis(1),
+      () -> deadband(m_driverController.getRawAxis(1), 0.15),
 
-      () -> m_driverController.getRawAxis(4)
+      () -> deadband(m_driverController.getRawAxis(4), 0.15)
 
     ));
+  
+
+    //Swerve.setDefaultCommand(Swerve.PIDTest());
 
     // Swerve.setDefaultCommand(Swerve.motorTest());
 
     System.out.println("configuring button bindings");
 
+    // m_driverController.a().whileTrue(Swerve.PIDTest());
     
     //m_driverController.x().onTrue(nimishaSubsystem.changeColorCommand(Color.BLUE));
     m_driverController.x().whileTrue(CSP.turnMotorOnToggle());
     m_driverController.y().onTrue(LED.changeColorCommand(Color.YELLOW, 1));
-    m_driverController.a().whileTrue(CSP.turnAtSetPoint());
+    // m_driverController.a().whileTrue(CSP.turnAtSetPoint());
     m_driverController.b().onTrue(
       LED.changeColorCommand(Color.RED, 1)
       //.andThen(new WaitCommand(1))
@@ -141,6 +146,13 @@ public class RobotContainer {
       (Servo.turnServoClockwise())
     );
 
+  }
+
+  static double deadband (double input, double threshold) {
+    if (Math.abs(input) > Math.abs(threshold)) {
+      return input;
+    }
+    return 0;
   }
 
   /**

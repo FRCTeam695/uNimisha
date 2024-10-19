@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.RobotContainer;
 
 import java.util.function.DoubleSupplier;
 
@@ -96,9 +97,9 @@ public class SwerveSubsystem extends SubsystemBase {
     turningMotor = new TalonFX(42);
     turningEncoder = new CANcoder(41);
     
-    //kP = 0.0001;
-    //kI = 0;
-    //kD = 0;
+    kP = 0.005;
+    kI = 0;
+    kD = 0;
    
     // Initializes the PID values from before
 
@@ -228,6 +229,7 @@ public class SwerveSubsystem extends SubsystemBase {
        * Computes the driveSpeed
        */
       driveSpeed = Math.sqrt(FWD4 * FWD4 + STR4 * STR4);
+
       
       /*
        * Computes the turnAngle, a number between -180 and 180 
@@ -296,16 +298,19 @@ public class SwerveSubsystem extends SubsystemBase {
       
     () -> {
 
-      // Updates values changed from Shuffleboard.
-      
-      loadPreferences();
-
     },
     
     () -> {
 
+      // Updates values changed from Shuffleboard.
+      
+      // loadPreferences();
+
+      targetPosition = 0;
+
       turnEncoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
 
+      System.out.println("Motor set to target speed");
       turningMotor.set(turningPIDControl.calculate(turnEncoderPosition, targetPosition));
 
     }, 
@@ -371,6 +376,9 @@ public class SwerveSubsystem extends SubsystemBase {
     SmartDashboard.putNumber(Constants.PIDConstants.iKey, kI);
     SmartDashboard.putNumber(Constants.PIDConstants.dKey, kD);
     SmartDashboard.putNumber(Constants.PIDConstants.tpKey, targetPosition);
+
+    // Shows y-input (a value between -1 and 1)
+    SmartDashboard.putNumber("Y-Input", RobotContainer.m_driverController.getRawAxis(1));
   }
 
 }

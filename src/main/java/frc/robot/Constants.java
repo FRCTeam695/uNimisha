@@ -44,5 +44,6 @@ public final class Constants {
     public static final String dKey = "D value";
     public static final String ffKey = "FF value";
     public static final String spKey = "Setpoint value";
+    public static final String tpKey = "Target position value";
   }
 }

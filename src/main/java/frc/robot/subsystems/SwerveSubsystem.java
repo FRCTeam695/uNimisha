@@ -34,39 +34,82 @@ import java.util.function.DoubleSupplier;
 
 public class SwerveSubsystem extends SubsystemBase {
 
+
+  /**
+   * Double finals for HALF the length and width of the chassis 
+   * 
+   * Currently, no neasurements so as seen below, they will be declared to a random number
+   */
   final double L;
   final double W;
+
+  /*
+   * Drive motor and turning motor (Talon FX motors) 
+   * 
+   * Turning encoder (for position) (CANcoder)
+   * 
+   * Turning encoder reads the value from the turning motor only and 
+   * uses the PID control to regulate the values
+   */
 
   public TalonFX driveMotor;
   public TalonFX turningMotor;
   public CANcoder turningEncoder;
-
   public PIDController turningPIDControl;
 
   public SimpleMotorFeedforward driveFF;
 
+  /*
+   * Declaration of PID variables
+   */
+  private double kP;
+  private double kI;
+  private double kD;
+
+  // Meant solely for PID tuning command (in order to tune the turning motor)
+  private double targetPosition;
+
+  private double driveSpeed;
+  private double turnAngle;
+  private double turnEncoderPosition;
 
   /** Creates a new SwerveSubsystem. */
   public SwerveSubsystem() {
 
+    /*
+     * For now, L and W are declared to random variables as there are no measurements
+     */
     L = 6;
     W = 6;
 
+    /*
+     * Sets motors and encoders to the proper ID
+     * 
+     * In this case, this module is coding for wheel #4, so tens digit is 4
+     * 
+     * Ones digit is as follows:
+     * 1 - Encoder
+     * 2 - Steering
+     * 3 - Drive
+     */
     driveMotor = new TalonFX(43);
     turningMotor = new TalonFX(42);
     turningEncoder = new CANcoder(41);
     
-    double kP = 0.0001;
-    double kI = 0;
-    double kD = 0;
+    //kP = 0.0001;
+    //kI = 0;
+    //kD = 0;
    
+    // Initializes the PID values from before
+
     turningPIDControl = new PIDController(kP, kI, kD);
 
-    turningPIDControl.enableContinuousInput(-180, 180); // Tells the PID controller that 180 and -180 are at the same place
+    /* Tells the PID controller that 180 and -180 are at the same place
+     * 
+     */
+    turningPIDControl.enableContinuousInput(-180, 180); 
     
   }
-
-  
 
   /**
     * Configures the drive motor
@@ -101,7 +144,7 @@ public class SwerveSubsystem extends SubsystemBase {
   */
 
   /**
-     * Configures the CANcoder,  this involves giving it an offset
+     * Configures the CANcoder, this involves giving it an offset
      * 
      * @param offset the offset to give the CANcoder
      */
@@ -115,8 +158,17 @@ public class SwerveSubsystem extends SubsystemBase {
 
     public TalonFX getDriveMotor(){return driveMotor;}
     public TalonFX getTurnMotor(){return turningMotor;}
+    public CANcoder getTurnEncoder(){return turningEncoder;}
 
 
+  /**
+   * Swerve drive method.
+   * 
+   * @param x1 // This represents strafe value on the left x joystick
+   * @param y1 // This represents forward value on the left y joystick
+   * @param x2 // This represents cw/ccw (rotation) value on the right x joystick
+   * @return
+   */
   public Command drive (DoubleSupplier x1, DoubleSupplier y1, DoubleSupplier x2) {
 
     return new FunctionalCommand(
@@ -125,38 +177,68 @@ public class SwerveSubsystem extends SubsystemBase {
 
     () -> {
       
-      // strafe 
+      // Strafe
       double xSTR = x1.getAsDouble();
 
-      // fwd
-      double yFWD = y1.getAsDouble() * -1;
+      // Forward
+      double yFWD = y1.getAsDouble() * -1; 
 
-      // rotation
+      // Rotation
       double xRCW = x2.getAsDouble();
 
-      // hypotenuse
-      double r = Math.sqrt ((L*L)+(W*W)); // side length of triangle created by width and length
+      // Hypotenuse (r value)
+      double r = Math.sqrt (Math.pow(L, 2)+Math.pow(W, 2)); 
       
-      // calculating rcw values. in this case doing 4th quadrant so backwards and right
-      // double RCW_fwd = yFWD - xRCW * (L/r); // going forward
-      double RCW_bkwd = yFWD + xRCW * (L/r); // going backward
-      double RCW_rightStr = xSTR + xRCW * (W/r); // going right
-      // double RCW_leftStr = xSTR - xRCW * (W/r); // going left
-    
-      // only one swerve drive for now in quadrant 4
-      // speed of motor
-      double backRightSpeed = Math.sqrt(RCW_bkwd * RCW_bkwd + RCW_rightStr * RCW_rightStr);
-      
-      // raw angle of motor
       /*
-       * quadrant 1 between values of 0 and 90 (going cw)
-       * quadrant 2 between values of -90 and 0 (going cw)
-       * quadrant 3 between values of 90 and 0 (going ccw)
-       * quadrant 4 between valyes of 0 and -90 (going ccw)
+       * Calculating RCW values.
        * 
        */
-      double backRightAngle = Math.toDegrees(Math.atan(RCW_rightStr/RCW_bkwd));
+      
+      double RCW_FWD = xRCW * (L/r); 
+      double RCW_STR = xRCW * (W/r); 
 
+      /*
+       * Calculating FWD and STR values.
+       *       
+       * The sign in between the two values is the following based on the quadrant:
+       *
+       *  Quadrant 1: 
+       *  FWD1 - 
+       *  STR1 +
+       * 
+       * Quadrant 2: 
+       *  FWD2 -
+       *  STR2 -
+       * 
+       * Quadrant 3:
+       *  FWD3 +
+       *  STR3 +
+       * 
+       * Quadrant 4:
+       *  FWD4 +
+       *  STR4 -
+       * 
+       * In this case, it is the 4th quadrant, hence the signs
+       * 
+       */
+      double FWD4 = yFWD + RCW_FWD;
+      double STR4 = xSTR - RCW_STR;
+    
+      /*
+       * Computes the driveSpeed
+       */
+      driveSpeed = Math.sqrt(FWD4 * FWD4 + STR4 * STR4);
+      
+      /*
+       * Computes the turnAngle, a number between -180 and 180 
+       *      STILL NEED TO TEST THIS!!! (turn off any drive commands and view shuffleboard)
+       */
+      turnAngle = Math.toDegrees(Math.atan2(FWD4, STR4));
+
+      // THE FOLLOWING IS NO LONGER NEEDED BECAUSE ATAN WAS SWAPPED FOR ATAN2
+      // (but it's just here in case)
+
+      /*
       // meant to match up the input angle with the encoder angle
       if (xSTR > 0) {
         if (yFWD > 0) {
@@ -171,22 +253,24 @@ public class SwerveSubsystem extends SubsystemBase {
           backRightAngle *= -1;
         }
       }
+      */
 
-      driveMotor.set(backRightSpeed);
+      // Following code calls to actually send these computed vaulues to the motors.
 
-      turningMotor.getPosition();
+      // Drive speed has been set.
+      driveMotor.set(driveSpeed);
 
-      double encoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
+      /* 
+       * Retrieves position of turning motor from the encoder
+       * 
+       * Value is returned in DEGREES, between the values of -180 and 180
+       */
+      turnEncoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
       
-      turningMotor.set(turningPIDControl.calculate(encoderPosition, backRightAngle));
-
-      SmartDashboard.putNumber("Module 4 PID Output", turningPIDControl.calculate(encoderPosition, backRightAngle));
-
-      SmartDashboard.putNumber("Module 4 Setpoint Angle", backRightAngle);
-
-      SmartDashboard.putNumber("Module 4 Velocity", driveMotor.getVelocity().getValueAsDouble());
-
-      SmartDashboard.putNumber("Module 4 Setpoint Speed", backRightSpeed);
+      // Uses PID control to bring the turning motor to the ideal position
+      // Compares actual position by reading from encoder to the setpoint angle
+      turningMotor.set(turningPIDControl.calculate(turnEncoderPosition, turnAngle));
+      
     },
 
     interrupted -> {},
@@ -199,14 +283,31 @@ public class SwerveSubsystem extends SubsystemBase {
 
   }
 
-  public Command motorTest () {
+  /*
+   * This command allows for PID tuning of the Talon FX motors.
+   * 
+   * Meant purely for testing purposes
+   * 
+   * Precondition : drive method is commented out, this method is set as default method
+   * 
+   */
+  public Command PIDTest () {
     return new FunctionalCommand(
       
-    () -> {},
+    () -> {
+
+      // Updates values changed from Shuffleboard.
+      
+      loadPreferences();
+
+    },
     
     () -> {
-      driveMotor.set(0.3);
-      System.out.println("Speed adjusted");
+
+      turnEncoderPosition = turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI);
+
+      turningMotor.set(turningPIDControl.calculate(turnEncoderPosition, targetPosition));
+
     }, 
     
     interrupted -> {}, 
@@ -216,13 +317,60 @@ public class SwerveSubsystem extends SubsystemBase {
     this);
   }
 
+  /*
+   * Helper method for relaying inputted PID values from shuffleboard to WPILIB
+   */
+  public void loadPreferences() {
+    // Load Preferences for kP
+    kP = Preferences.getDouble(Constants.PIDConstants.pKey, kP);
+    if (kP != Preferences.getDouble(Constants.PIDConstants.pKey, kP)) {
+      kP = Preferences.getDouble(Constants.PIDConstants.pKey, kP);
+      turningPIDControl.setP(kP);
+    }
+
+    // Load Preferences for kI
+    kI = Preferences.getDouble(Constants.PIDConstants.iKey, kI);
+    if (kI != Preferences.getDouble(Constants.PIDConstants.iKey, kI)) {
+      kI = Preferences.getDouble(Constants.PIDConstants.iKey, kI);
+      turningPIDControl.setI(kI);
+    }
+
+    // Load Preferences for kD
+    kD = Preferences.getDouble(Constants.PIDConstants.dKey, kD);
+    if (kD != Preferences.getDouble(Constants.PIDConstants.dKey, kD)) {
+      kD = Preferences.getDouble(Constants.PIDConstants.dKey, kD);
+      turningPIDControl.setD(kD);
+    }
+    
+    // Load Preferences for set point
+    targetPosition = Preferences.getDouble(Constants.PIDConstants.tpKey, targetPosition);
+    if (targetPosition != Preferences.getDouble(Constants.PIDConstants.tpKey, targetPosition)) {
+      targetPosition = Preferences.getDouble(Constants.PIDConstants.tpKey, targetPosition);
+    }
+  }
+
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-          SmartDashboard.putNumber("CANCoder Value", turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI);
+    
+    // Following three values return values pertaining to the turning angle
+    SmartDashboard.putNumber("(DEGREES) Module 4 Turning Motor Position from CANcoder", turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI));
 
-          SmartDashboard.putNumber("1 CANcoder value", turningEncoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI * (180/Math.PI));
+    SmartDashboard.putNumber("Module 4 PID Output", turningPIDControl.calculate(turnEncoderPosition, turnAngle));
+          
+    SmartDashboard.putNumber("(DEGREES) Module 4 Setpoint Angle", turnAngle);
+    
+    // Both the following return speed of drive motor (2 different ways)
+    SmartDashboard.putNumber("Module 4 Velocity", driveMotor.getVelocity().getValueAsDouble());
 
+    SmartDashboard.putNumber("Module 4 Speed", driveSpeed);
+
+    // The following put values for PID control testing
+    // THESE VALUES ARE ALSO EDITABLE!!
+    SmartDashboard.putNumber(Constants.PIDConstants.pKey, kP);
+    SmartDashboard.putNumber(Constants.PIDConstants.iKey, kI);
+    SmartDashboard.putNumber(Constants.PIDConstants.dKey, kD);
+    SmartDashboard.putNumber(Constants.PIDConstants.tpKey, targetPosition);
   }
 
 }

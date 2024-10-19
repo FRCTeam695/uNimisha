@@ -118,7 +118,7 @@ public class RobotContainer {
 
     System.out.println("configuring button bindings");
 
-    m_driverController.a().whileTrue(Swerve.faceForward());
+    m_driverController.a().onTrue(Swerve.faceForward());
     
     //m_driverController.x().onTrue(nimishaSubsystem.changeColorCommand(Color.BLUE));
     m_driverController.x().whileTrue(CSP.turnMotorOnToggle());
